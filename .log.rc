@@ -1,0 +1,62 @@
+#!/bin/sh
+
+
+_LOG_DIR=`dirname "$(readlink -f "$0")"`
+
+_LOG_INFO_FD=3
+_VERBOSE_DEFAULT=3
+
+# Set default verbose level.
+[[ "${_VERBOSE}" == "" ]] && _VERBOSE=${_VERBOSE_DEFAULT}
+
+# Color definitions can be found in '.color.rc'.
+# You can either place it to the same directory of this script and un-comment 
+# the following line to source it, or you can source it before this script.
+# Notes: Not sourcing the '.color.rc' will simply disable color.
+# -----
+# source "$(dirname "$(readlink -f "$0")")/.color.rc"
+
+# Suppress ${_LOG_INFO_FD} file descriptor if _VERBOSE is lower than 4.
+# Then, `echo "info" >&${_LOG_INFO_FD}` will be suppressed if _VERBOSE is lower than 4.
+# Ref: https://stackoverflow.com/questions/8756535/conditional-redirection-in-bash
+# Ref: https://stackoverflow.com/questions/26607577/how-to-write-to-a-named-file-descriptor-in-bash
+if [[ ${_VERBOSE} -lt 4 ]]; then
+    eval "exec ${_LOG_INFO_FD}>/dev/null"
+else
+    eval "exec ${_LOG_INFO_FD}>&1"
+fi
+
+_log_error() {
+    [[ ${_VERBOSE} -lt 1 ]] && return
+	[[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_BRed}
+	echo "[ERR] $1"
+	[[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_Off}
+}
+
+_log_warning() {
+    [[ ${_VERBOSE} -lt 2 ]] && return
+	[[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_BYellow}
+	echo "[WRN] $1"
+	[[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_Off}
+}
+
+_log_highlight() {
+    [[ ${_VERBOSE} -lt 3 ]] && return
+	[[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_BGreen}
+	echo "$1"
+	[[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_Off}
+}
+
+_log_info() {
+    [[ ${_VERBOSE} -lt 4 ]] && return
+    [[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_Off}
+    echo "$1"
+    [[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_Off}
+}
+
+_LOG_HELP=$(cat << _EOF_
+    _VERBOSE=LEVEL  Set verbose LEVEL. Default is ${_VERBOSE_DEFAULT}.
+                    LEVEL: 0 (none), 1 (error), 2 (warnning), 3 (important), 4 (info)
+    _NO_COLOR=0     Disable color messages.
+_EOF_
+)

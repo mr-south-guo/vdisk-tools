@@ -1,0 +1,68 @@
+#!/bin/sh
+
+_CHECKS_DIR=`dirname "$(readlink -f "$0")"`
+
+# --------------------
+# If log functions do not exist, define some simple ones.
+[[ $(type -t _log_error) ]] || _log_error() {
+    echo "[ERR] $1"
+}
+
+[[ $(type -t _log_warning) ]] || _log_warning() {
+    echo "[WRN] $1"
+}
+
+# --------------------
+# Check functions
+_check_file_exist() {
+    if [[ ! -f "$1"  ]]; then
+        _log_error "'$1' does not exists."
+        exit 1
+    fi
+}
+
+_check_file_not_exist() {
+    if [[ -f "$1"  ]]; then
+        if [[ "$2" == "overwrite" ]]; then
+            _log_warning "'$1' already exists and will be overwritten."
+            rm "$1"
+            if [[ -f "$1"  ]]; then
+                _log_error "Fail to remove '$1'."
+                exit 1
+            fi
+        else
+            _log_error "'$1' already exists."
+            exit 1
+        fi
+    fi
+}
+
+_check_dir_exist() {
+    if [[ ! -d "$1" ]]; then
+        if [[ "$2" == "mkdir" ]]; then
+            _log_warning "'$1' does not exist and will be created."
+            mkdir -p "$1"
+            if [[ ! -d "$1" ]]; then
+                _log_error "Fail to create '$1'."
+                exit 1
+            fi
+        else
+            _log_error "'$1' does not exist."
+            exit 1
+        fi
+    fi
+}
+
+_check_dir_not_exist() {
+    if [[ -d "$1" ]]; then
+        _log_error "'$1' already exists."
+        exit 1
+    fi
+}
+
+_check_drive_exist() {
+    if [[ -d "$1/" ]]; then
+        _log_error "$1 already exists."
+        exit 1
+    fi
+}
