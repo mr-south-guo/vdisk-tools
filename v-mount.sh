@@ -10,6 +10,7 @@ source "${_SCRIPT_DIR}/.v-common.rc"
 # Default values
 optPartition=1
 optMkDir="no"
+optCommand=""
 
 # ------------------
 # Help
@@ -30,12 +31,13 @@ OPTIONS:
 
     -m,--mkdir          Create the mount-point directory if not exists. (Does not apply to drive letter.)
     -p,--partition N    Mount the N'th partition. Default is 1.
+    -c,--command "CMD"  Run diskpart command right after mounting (while the volume is still selected).
 
 ${_HELP_VARIABLES}
 
 Example:
 
-    ${SCRIPT_NAME} x:/some/vdisk.vhdx y:
+    ${_SCRIPT_NAME} x:/some/vdisk.vhdx y:
     _VERBOSE=4 _NO_COLOR=0 ${_SCRIPT_NAME} --mkdir --partition 2 x:/some/vdisk.vhdx y:/some/dir
 _EOF_
     exit
@@ -44,7 +46,7 @@ fi
 # ------------------
 # Parse arguments
 # Ref: https://www.tutorialspoint.com/unix_commands/getopt.htm
-GETOPT=`getopt -o mp: -l mkdir,partition: -- "$@"`
+GETOPT=`getopt -o mp:c: -l mkdir,partition:,command: -- "$@"`
 eval set -- "$GETOPT"
 while true; do
     case "$1" in
@@ -52,6 +54,8 @@ while true; do
         optMkDir="mkdir"; shift;;
     -p|--partition)
         optPartition=$2; shift 2;;
+    -c|--command)
+        optCommand="$2"; shift 2;;
     --)
         shift; break;;
     *)
@@ -79,6 +83,7 @@ select vdisk file="${vdiskFile//\//\\}"
 attach vdisk
 select partition=${optPartition}
 assign letter=${mountPoint:0:1}
+${optCommand}
 _EOF_
     )
 else
@@ -90,6 +95,7 @@ attach vdisk
 select partition=${optPartition}
 remove all
 assign mount="${mountPoint}"
+${optCommand}
 _EOF_
     )
 fi

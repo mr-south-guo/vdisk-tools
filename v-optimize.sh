@@ -9,6 +9,7 @@ source "${_SCRIPT_DIR}/.v-common.rc"
 # ------------------
 # Default values
 optDefrag="yes"
+optRebound="yes"
 optZero="yes"
 optWorkspace="z:"
 optPartition=1
@@ -20,13 +21,14 @@ if [[ $# -lt 1 || "$1" == "-h" || "$1" == "--help" ]]; then
 
 Usage: [VARIABLES] ${_SCRIPT_NAME} [OPTIONS] v-FILE
 
-Defrag, zero-out free space and then compact a expandable vdisk file.
+Defrag, rebound(shrink & extend), zero-out free space and then compact an expandable vdisk file.
 
     v-FILE      Path to the vdisk file.
 
 OPTIONS:
 
     -d,--no-defrag          Do not defrag.
+    -r,--no-rebound         Do not rebound.
     -z,--no-zero            Do not zero-out free space.
     -w,--workspace SPACE    A drive or a directory to mount the vdisk while working. 
                             It should not already exist and will be removed afterwards. Default is "z:".
@@ -45,12 +47,14 @@ fi
 # ------------------
 # Parse arguments
 # Ref: https://www.tutorialspoint.com/unix_commands/getopt.htm
-GETOPT=`getopt -o dzw:p: -l no-defrag,no-zero,workspace:,partition: -- "$@"`
+GETOPT=`getopt -o drzw:p: -l no-defrag,no-zero,no-rebound,workspace:,partition: -- "$@"`
 eval set -- "$GETOPT"
 while true; do
     case "$1" in
     -d|--no-defrag)
         optDefrag="no"; shift;;
+    -r|--no-rebound)
+        optRebound="no"; shift;;
     -z|--no-zero)
         optZero="no"; shift;;
     -w|--workspace)
@@ -74,25 +78,29 @@ vdiskFile=$(realpath "$1")
 # ------------------
 # Action
 
-if [[ "${optDefrag}" == "yes" || "${optZero}" == "yes" ]]; then
+if [[ "${optDefrag}" == "yes" ]]; then
+    _log_highlight "Defraging '${optWorkspace}' ..."
     "${_SCRIPT_DIR}/v-mount.sh" -p ${optPartition} -m "${vdiskFile}" "${optWorkspace}"
-
-    if [[ "${optDefrag}" == "yes" ]]; then
-        _log_highlight "Defraging '${optWorkspace}' ..."
-        defrag ${optWorkspace} /U >&${_LOG_INFO_FD}
-    fi
-
-    if [[ "${optZero}" == "yes" ]]; then
-        _log_highlight "Zeroing-out free space on '${optWorkspace}' ..."
-        dd if=/dev/zero of="${optWorkspace}/.zeros" bs=4k 2>/dev/null 1>&${_LOG_INFO_FD}
-        rm "${optWorkspace}/.zeros"
-    fi
-
+    defrag ${optWorkspace} /U >&${_LOG_INFO_FD}
     "${_SCRIPT_DIR}/v-umount.sh" "${vdiskFile}"
-
-    # Remove the workspace if it is a directory.
-    [[ "${optWorkspace: -1}" == ":" ]] || rmdir "${optWorkspace}"
 fi
+
+if [[ "${optRebound}" == "yes" ]]; then
+    _log_highlight "Rebounding '${optWorkspace}' ..."
+    "${_SCRIPT_DIR}/v-shrink.sh" -p ${optPartition} -w "${optWorkspace}" "${vdiskFile}"
+    "${_SCRIPT_DIR}/v-extend.sh" -p ${optPartition} -w "${optWorkspace}" "${vdiskFile}"
+fi
+
+if [[ "${optZero}" == "yes" ]]; then
+    _log_highlight "Zeroing-out free space on '${optWorkspace}' ..."
+    "${_SCRIPT_DIR}/v-mount.sh" -p ${optPartition} -m "${vdiskFile}" "${optWorkspace}"
+    dd if=/dev/zero of="${optWorkspace}/.zeros" bs=4k 2>/dev/null 1>&${_LOG_INFO_FD}
+    rm "${optWorkspace}/.zeros"
+    "${_SCRIPT_DIR}/v-umount.sh" "${vdiskFile}"
+fi
+
+# Remove the workspace if it is a directory.
+[[ "${optWorkspace: -1}" == ":" ]] || rmdir "${optWorkspace}"
 
 # ----- Compact
 diskpartScript=$(cat << _EOF_
