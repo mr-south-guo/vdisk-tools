@@ -5,8 +5,9 @@ _LOG_DIR=`dirname "$(readlink -f "$0")"`
 
 _LOG_INFO_FD=3
 _VERBOSE_DEFAULT=3
+_LOG_PREFIX_INDENT="  "
 
-# Set default verbose level.
+# Set defaults.
 [[ "${_VERBOSE}" == "" ]] && _VERBOSE=${_VERBOSE_DEFAULT}
 
 # Color definitions can be found in '.color.rc'.
@@ -29,29 +30,34 @@ fi
 _log_error() {
     [[ ${_VERBOSE} -lt 1 ]] && return
 	[[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_BRed}
-	echo "[ERR] $1"
+	echo "${_LOG_PREFIX}[ERR] $1"
 	[[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_Off}
 }
 
 _log_warning() {
     [[ ${_VERBOSE} -lt 2 ]] && return
 	[[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_BYellow}
-	echo "[WRN] $1"
+	echo "${_LOG_PREFIX}[WRN] $1"
 	[[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_Off}
 }
 
 _log_highlight() {
     [[ ${_VERBOSE} -lt 3 ]] && return
 	[[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_BGreen}
-	echo "$1"
+	echo "${_LOG_PREFIX}$1"
 	[[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_Off}
 }
 
 _log_info() {
     [[ ${_VERBOSE} -lt 4 ]] && return
     [[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_Off}
-    echo "$1"
+    echo "${_LOG_PREFIX}$1"
     [[ ${_NO_COLOR} ]] || echo -n -e ${_COLOR_Off}
+}
+
+_log_empty_line() {
+    [[ ${_VERBOSE} -lt 4 ]] && return
+    echo ""
 }
 
 _LOG_HELP=$(cat << _EOF_

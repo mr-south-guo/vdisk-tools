@@ -5,6 +5,7 @@
 _SCRIPT_DIR=`dirname "$(readlink -f "$0")"`
 _SCRIPT_NAME=`basename "$0"`
 source "${_SCRIPT_DIR}/.v-common.rc"
+[[ ${_LOG_PREFIX} ]] || _LOG_PREFIX="[${_SCRIPT_NAME}] "
 
 # ------------------
 # Default values
@@ -80,23 +81,27 @@ vdiskFile=$(realpath "$1")
 
 if [[ "${optDefrag}" == "yes" ]]; then
     _log_highlight "Defraging '${optWorkspace}' ..."
-    "${_SCRIPT_DIR}/v-mount.sh" -p ${optPartition} -m "${vdiskFile}" "${optWorkspace}"
+    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-mount.sh" -p ${optPartition} -m "${vdiskFile}" "${optWorkspace}"
     defrag ${optWorkspace} /U >&${_LOG_INFO_FD}
-    "${_SCRIPT_DIR}/v-umount.sh" "${vdiskFile}"
+    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-umount.sh" "${vdiskFile}"
+    _log_empty_line
 fi
 
 if [[ "${optRebound}" == "yes" ]]; then
     _log_highlight "Rebounding '${optWorkspace}' ..."
-    "${_SCRIPT_DIR}/v-shrink.sh" -p ${optPartition} -w "${optWorkspace}" "${vdiskFile}"
-    "${_SCRIPT_DIR}/v-extend.sh" -p ${optPartition} -w "${optWorkspace}" "${vdiskFile}"
+    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-shrink.sh" -p ${optPartition} -w "${optWorkspace}" "${vdiskFile}"
+    _log_empty_line
+    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-extend.sh" -p ${optPartition} -w "${optWorkspace}" "${vdiskFile}"
+    _log_empty_line
 fi
 
 if [[ "${optZero}" == "yes" ]]; then
     _log_highlight "Zeroing-out free space on '${optWorkspace}' ..."
-    "${_SCRIPT_DIR}/v-mount.sh" -p ${optPartition} -m "${vdiskFile}" "${optWorkspace}"
+    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-mount.sh" -p ${optPartition} -m "${vdiskFile}" "${optWorkspace}"
     dd if=/dev/zero of="${optWorkspace}/.zeros" bs=4k 2>/dev/null 1>&${_LOG_INFO_FD}
     rm "${optWorkspace}/.zeros"
-    "${_SCRIPT_DIR}/v-umount.sh" "${vdiskFile}"
+    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-umount.sh" "${vdiskFile}"
+    _log_empty_line
 fi
 
 # Remove the workspace if it is a directory.
@@ -110,6 +115,7 @@ _EOF_
 )
 _log_highlight "Compacting '${vdiskFile}' ..."
 _log_info "----- Script to be run by diskpart:"
-_log_info "${diskpartScript}"
+_LOG_PREFIX="" _log_info "${diskpartScript}"
+
 _log_info "----- Running diskpart ..."
 echo "${diskpartScript}" | ${_DISKPART} >&${_LOG_INFO_FD}

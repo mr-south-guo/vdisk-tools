@@ -5,6 +5,7 @@
 _SCRIPT_DIR=`dirname "$(readlink -f "$0")"`
 _SCRIPT_NAME=`basename "$0"`
 source "${_SCRIPT_DIR}/.v-common.rc"
+[[ ${_LOG_PREFIX} ]] || _LOG_PREFIX="[${_SCRIPT_NAME}] "
 
 # ------------------
 # Help
@@ -42,7 +43,6 @@ _EOF_
 # Action
 _log_highlight "Showing information on '${vdiskFile}' ..."
 _log_info "----- Script to be run by diskpart:"
-_log_info "${diskpartScript}"
-
+_LOG_PREFIX="" _log_info "${diskpartScript}"
 _log_info "----- Running diskpart ..."
 echo "${diskpartScript}" | ${_DISKPART}

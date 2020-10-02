@@ -5,6 +5,7 @@
 _SCRIPT_DIR=`dirname "$(readlink -f "$0")"`
 _SCRIPT_NAME=`basename "$0"`
 source "${_SCRIPT_DIR}/.v-common.rc"
+[[ ${_LOG_PREFIX} ]] || _LOG_PREFIX="[${_SCRIPT_NAME}] "
 
 # ------------------
 # Default values
@@ -70,6 +71,8 @@ vdiskFile=$(realpath "$1")
 
 # ------------------
 # Action
+_log_highlight "Shrinking '$1' ..."
+
 shrinkCmd="shrink ${optDesired}"
-"${_SCRIPT_DIR}/v-mount.sh" -p ${optPartition} -m -c "${shrinkCmd}" "${vdiskFile}" "${optWorkspace}"
-"${_SCRIPT_DIR}/v-umount.sh" "${vdiskFile}"
+_LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-mount.sh" -p ${optPartition} -m -c "${shrinkCmd}" "${vdiskFile}" "${optWorkspace}"
+_LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-umount.sh" "${vdiskFile}"

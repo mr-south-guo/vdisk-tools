@@ -5,6 +5,7 @@
 _SCRIPT_DIR=`dirname "$(readlink -f "$0")"`
 _SCRIPT_NAME=`basename "$0"`
 source "${_SCRIPT_DIR}/.v-common.rc"
+[[ ${_LOG_PREFIX} ]] || _LOG_PREFIX="[${_SCRIPT_NAME}] "
 
 # ------------------
 # Default values
@@ -26,7 +27,7 @@ Note: This operation does not change the vdisk file size. It merely changes the 
 
 OPTIONS:
     -p,--partition N    Operate on the N'th partition. Default is 1.
-    -d,--desired S      Extend the partition by S MB. Default is the maximum possible amount.
+    -d,--desired D      Extend the partition by D MB. Default is the maximum possible amount.
     -w,--workspace SPACE    A drive or a directory to mount the vdisk while working. 
                             It should not already exist and will be removed afterwards. Default is "z:".
 
@@ -70,6 +71,8 @@ vdiskFile=$(realpath "$1")
 
 # ------------------
 # Action
+_log_highlight "Extending '$1' ..."
+
 extendCmd="extend ${optDesired}"
-"${_SCRIPT_DIR}/v-mount.sh" -p ${optPartition} -m -c "${extendCmd}" "${vdiskFile}" "${optWorkspace}"
-"${_SCRIPT_DIR}/v-umount.sh" "${vdiskFile}"
+_LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-mount.sh" -p ${optPartition} -m -c "${extendCmd}" "${vdiskFile}" "${optWorkspace}"
+_LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-umount.sh" "${vdiskFile}"
