@@ -1,13 +1,14 @@
 #!/bin/sh
+# shellcheck disable=2154,1090,2034
 
-_VDISK_COMMON_DIR=`dirname "$(readlink -f "$0")"`
+_VDISK_COMMON_DIR=$(dirname "$(readlink -f "$0")")
 
 # Sources
 # ------------------
 # Don't change the order. Some depend on the previous ones.
-[[ ${_COLOR_Off} ]] || source "${_VDISK_COMMON_DIR}/.color.rc"
-[[ ${_LOG_DIR} ]] || source "${_VDISK_COMMON_DIR}/.log.rc"
-[[ ${_CHECKS_DIR} ]] || source "${_VDISK_COMMON_DIR}/.checks.rc"
+[ "${_COLOR_Off}" ] || . "${_VDISK_COMMON_DIR}/.color.rc"
+[ "${_LOG_DIR}" ] || . "${_VDISK_COMMON_DIR}/.log.rc"
+[ "${_CHECKS_DIR}" ] || . "${_VDISK_COMMON_DIR}/.checks.rc"
 
 ## @fn: A drop-in replacement of busybox's `realpath`.
 # Busybox's `realpath` fails in some cases, such as ImDisk's mount.
@@ -15,6 +16,12 @@ realpath() {
     if cd "$(dirname "$1")" 2>/dev/null; then
         echo "$(pwd -P)/$(basename "$1")"
     fi
+}
+
+## @fn: Convert path to Windows style (slash to backslash)
+# Windows's `diskpart` does not support slash in path.
+toWindowsPath() {
+    printf '%s' "$1" | tr "/" "\\"
 }
 
 # Setup Help
@@ -30,7 +37,7 @@ _EOF_
 # Setup DiskPart
 # ------------------
 _DISKPART="${_VDISK_COMMON_DIR}/.diskpart.sh"
-if [[ ! "$(diskpart /? | grep 'DiskPart')" ]]; then
+if ! diskpart /? | grep -q 'DiskPart'; then
     _log_error "'diskpart' is not runnable. Maybe you are not running as admin?"
     exit 1
 fi
