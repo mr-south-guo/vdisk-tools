@@ -1,11 +1,12 @@
 #!/bin/sh
+# shellcheck disable=1090
 
 # ------------------
 # Basic settings
-_SCRIPT_DIR=`dirname "$(readlink -f "$0")"`
-_SCRIPT_NAME=`basename "$0"`
-source "${_SCRIPT_DIR}/.v-common.rc"
-[[ ${_LOG_PREFIX} ]] || _LOG_PREFIX="[${_SCRIPT_NAME}] "
+_SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+_SCRIPT_NAME=$(basename "$0")
+. "${_SCRIPT_DIR}/.v-common.rc"
+[ "${_LOG_PREFIX}" ] || _LOG_PREFIX="[${_SCRIPT_NAME}] "
 
 # ------------------
 # Default values
@@ -15,7 +16,7 @@ optWorkspace="z:"
 
 # ------------------
 # Help
-if [[ $# -lt 1 || "$1" == "-h" || "$1" == "--help" ]]; then
+if [ $# -lt 1 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     cat << _EOF_
 
 Usage: [VARIABLES] ${_SCRIPT_NAME} [OPTIONS] v-FILE
@@ -45,7 +46,7 @@ fi
 # ------------------
 # Parse arguments
 # Ref: https://www.tutorialspoint.com/unix_commands/getopt.htm
-GETOPT=`getopt -o d:w:p: -l desired:,workspace:,partition: -- "$@"`
+GETOPT=$(getopt -o d:w:p: -l desired:,workspace:,partition: -- "$@")
 eval set -- "$GETOPT"
 while true; do
     case "$1" in
@@ -74,5 +75,5 @@ vdiskFile=$(realpath "$1")
 _log_highlight "Extending '$1' ..."
 
 extendCmd="extend ${optDesired}"
-_LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-mount.sh" -p ${optPartition} -m -c "${extendCmd}" "${vdiskFile}" "${optWorkspace}"
+_LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-mount.sh" -p "${optPartition}" -m -c "${extendCmd}" "${vdiskFile}" "${optWorkspace}"
 _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-umount.sh" "${vdiskFile}"

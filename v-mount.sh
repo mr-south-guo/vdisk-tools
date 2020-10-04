@@ -1,11 +1,12 @@
 #!/bin/sh
+# shellcheck disable=1090
 
 # ------------------
 # Basic settings
-_SCRIPT_DIR=`dirname "$(readlink -f "$0")"`
-_SCRIPT_NAME=`basename "$0"`
-source "${_SCRIPT_DIR}/.v-common.rc"
-[[ ${_LOG_PREFIX} ]] || _LOG_PREFIX="[${_SCRIPT_NAME}] "
+_SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+_SCRIPT_NAME=$(basename "$0")
+. "${_SCRIPT_DIR}/.v-common.rc"
+[ "${_LOG_PREFIX}" ] || _LOG_PREFIX="[${_SCRIPT_NAME}] "
 
 # ------------------
 # Default values
@@ -15,7 +16,7 @@ optCommand=""
 
 # ------------------
 # Help
-if [[ $# -lt 2 || "$1" == "-h" || "$1" == "--help" ]]; then
+if [ $# -lt 2 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     cat << _EOF_
 
 Usage: [VARIABLES] ${_SCRIPT_NAME} [OPTIONS] v-FILE MOUNT-POINT
@@ -47,7 +48,7 @@ fi
 # ------------------
 # Parse arguments
 # Ref: https://www.tutorialspoint.com/unix_commands/getopt.htm
-GETOPT=`getopt -o mp:c: -l mkdir,partition:,command: -- "$@"`
+GETOPT=$(getopt -o mp:c: -l mkdir,partition:,command: -- "$@")
 eval set -- "$GETOPT"
 while true; do
     case "$1" in
@@ -68,19 +69,21 @@ done
 # Preparation
 _check_file_exist "$1"
 vdiskFile=$(realpath "$1")
+vdiskFile=$(toWindowsPath "${vdiskFile}")
 
 # Remove the trailing '/' if exists.
 mountPoint=${2%/}
 
 # Check whether the mount-point is a drive letter or a directory.
-if [[ "${mountPoint: -1}" == ":" ]]; then
+if [ "$(str_right "${mountPoint}" 1)" = ":" ]; then
     # It is a drive letter.
     _check_drive_exist "${mountPoint}"
+    mountLetter=$(str_sub "${mountPoint}" 0 1)
     diskpartScript=$(cat << _EOF_
-select vdisk file="${vdiskFile//\//\\}"
+select vdisk file="${vdiskFile}"
 attach vdisk
 select partition=${optPartition}
-assign letter=${mountPoint:0:1}
+assign letter=${mountLetter}
 ${optCommand}
 _EOF_
     )
@@ -88,7 +91,7 @@ else
     # It is a directory.
     _check_dir_exist "${mountPoint}" $optMkDir
     diskpartScript=$(cat << _EOF_
-select vdisk file="${vdiskFile//\//\\}"
+select vdisk file="${vdiskFile}"
 attach vdisk
 select partition=${optPartition}
 remove all
@@ -102,8 +105,12 @@ fi
 # Action
 _log_highlight "Mounting '$1' to '$2' ..."
 
-_log_info "----- Script to be run by diskpart:"
+_log_info "--- Diskpart script: begin"
 _LOG_PREFIX="" _log_info "${diskpartScript}"
+_log_info "--- Diskpart script: end"
 
-_log_info "----- Running diskpart ..."
+_log_info "Running diskpart ..."
+
+# ${_LOG_INFO_FD} is 3 (default), and >&3 is POSIX compliant.
+# shellcheck disable=2039,2086
 echo "${diskpartScript}" | ${_DISKPART} >&${_LOG_INFO_FD}

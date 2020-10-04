@@ -1,11 +1,12 @@
 #!/bin/sh
+# shellcheck disable=1090
 
 # ------------------
 # Basic settings
-_SCRIPT_DIR=`dirname "$(readlink -f "$0")"`
-_SCRIPT_NAME=`basename "$0"`
-source "${_SCRIPT_DIR}/.v-common.rc"
-[[ ${_LOG_PREFIX} ]] || _LOG_PREFIX="[${_SCRIPT_NAME}] "
+_SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+_SCRIPT_NAME=$(basename "$0")
+. "${_SCRIPT_DIR}/.v-common.rc"
+[ "${_LOG_PREFIX}" ] || _LOG_PREFIX="[${_SCRIPT_NAME}] "
 
 # ------------------
 # Default values
@@ -17,7 +18,7 @@ optPartition=1
 
 # ------------------
 # Help
-if [[ $# -lt 1 || "$1" == "-h" || "$1" == "--help" ]]; then
+if [ $# -lt 1 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     cat << _EOF_
 
 Usage: [VARIABLES] ${_SCRIPT_NAME} [OPTIONS] v-FILE
@@ -48,7 +49,7 @@ fi
 # ------------------
 # Parse arguments
 # Ref: https://www.tutorialspoint.com/unix_commands/getopt.htm
-GETOPT=`getopt -o drzw:p: -l no-defrag,no-zero,no-rebound,workspace:,partition: -- "$@"`
+GETOPT=$(getopt -o drzw:p: -l no-defrag,no-zero,no-rebound,workspace:,partition: -- "$@")
 eval set -- "$GETOPT"
 while true; do
     case "$1" in
@@ -79,43 +80,58 @@ vdiskFile=$(realpath "$1")
 # ------------------
 # Action
 
-if [[ "${optDefrag}" == "yes" ]]; then
+if [ "${optDefrag}" = "yes" ]; then
     _log_highlight "Defraging '${optWorkspace}' ..."
-    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-mount.sh" -p ${optPartition} -m "${vdiskFile}" "${optWorkspace}"
-    defrag ${optWorkspace} /U >&${_LOG_INFO_FD}
+    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-mount.sh" -p "${optPartition}" -m "${vdiskFile}" "${optWorkspace}"
+
+    # ${_LOG_INFO_FD} is 3 (default), and >&3 is POSIX compliant.
+    # shellcheck disable=2039,2086
+    defrag "${optWorkspace}" /U >&${_LOG_INFO_FD}
+
     _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-umount.sh" "${vdiskFile}"
     _log_empty_line
 fi
 
-if [[ "${optRebound}" == "yes" ]]; then
+if [ "${optRebound}" = "yes" ]; then
     _log_highlight "Rebounding '${optWorkspace}' ..."
-    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-shrink.sh" -p ${optPartition} -w "${optWorkspace}" "${vdiskFile}"
+    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-shrink.sh" -p "${optPartition}" -w "${optWorkspace}" "${vdiskFile}"
     _log_empty_line
-    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-extend.sh" -p ${optPartition} -w "${optWorkspace}" "${vdiskFile}"
+    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-extend.sh" -p "${optPartition}" -w "${optWorkspace}" "${vdiskFile}"
     _log_empty_line
 fi
 
-if [[ "${optZero}" == "yes" ]]; then
+if [ "${optZero}" = "yes" ]; then
     _log_highlight "Zeroing-out free space on '${optWorkspace}' ..."
-    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-mount.sh" -p ${optPartition} -m "${vdiskFile}" "${optWorkspace}"
+    _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-mount.sh" -p "${optPartition}" -m "${vdiskFile}" "${optWorkspace}"
+
+    # ${_LOG_INFO_FD} is 3 (default), and >&3 is POSIX compliant.
+    # shellcheck disable=2039,2086
     dd if=/dev/zero of="${optWorkspace}/.zeros" bs=4k 2>/dev/null 1>&${_LOG_INFO_FD}
+
     rm "${optWorkspace}/.zeros"
     _LOG_PREFIX="${_LOG_PREFIX}${_LOG_PREFIX_INDENT}" "${_SCRIPT_DIR}/v-umount.sh" "${vdiskFile}"
     _log_empty_line
 fi
 
 # Remove the workspace if it is a directory.
-[[ "${optWorkspace: -1}" == ":" ]] || rmdir "${optWorkspace}"
+[ "$(str_right "${optWorkspace}" 1)" = ":" ] || rmdir "${optWorkspace}"
 
 # ----- Compact
+vdiskFile=$(toWindowsPath "${vdiskFile}")
 diskpartScript=$(cat << _EOF_
-select vdisk file="${vdiskFile//\//\\}"
+select vdisk file="${vdiskFile}"
 compact vdisk
 _EOF_
 )
-_log_highlight "Compacting '${vdiskFile}' ..."
-_log_info "----- Script to be run by diskpart:"
-_LOG_PREFIX="" _log_info "${diskpartScript}"
 
-_log_info "----- Running diskpart ..."
+_log_highlight "Compacting '${vdiskFile}' ..."
+
+_log_info "--- Diskpart script: begin"
+_LOG_PREFIX="" _log_info "${diskpartScript}"
+_log_info "--- Diskpart script: end"
+
+_log_info "Running diskpart ..."
+
+# ${_LOG_INFO_FD} is 3 (default), and >&3 is POSIX compliant.
+# shellcheck disable=2039,2086
 echo "${diskpartScript}" | ${_DISKPART} >&${_LOG_INFO_FD}

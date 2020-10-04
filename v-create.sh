@@ -1,11 +1,12 @@
 #!/bin/sh
+# shellcheck disable=1090
 
 # ------------------
 # Basic settings
-_SCRIPT_DIR=`dirname "$(readlink -f "$0")"`
-_SCRIPT_NAME=`basename "$0"`
-source "${_SCRIPT_DIR}/.v-common.rc"
-[[ ${_LOG_PREFIX} ]] || _LOG_PREFIX="[${_SCRIPT_NAME}] "
+_SCRIPT_DIR=$(dirname "$(readlink -f "$0")")
+_SCRIPT_NAME=$(basename "$0")
+. "${_SCRIPT_DIR}/.v-common.rc"
+[ "${_LOG_PREFIX}" ] || _LOG_PREFIX="[${_SCRIPT_NAME}] "
 
 # ------------------
 # Default values
@@ -17,7 +18,7 @@ optMkDir=""         # mkdir, (anything else)
 
 # ------------------
 # Help
-if [[ $# -lt 2 || "$1" == "-h" || "$1" == "--help" ]]; then
+if [ $# -lt 2 ] || [ "$1" = "-h" ] || [ "$1" = "--help" ]; then
     cat << _EOF_
 
 Usage: [VARIABLES] ${_SCRIPT_NAME} [OPTIONS] v-FILE FILE-SIZE
@@ -48,7 +49,7 @@ fi
 # ------------------
 # Parse arguments
 # Ref: https://www.tutorialspoint.com/unix_commands/getopt.htm
-GETOPT=`getopt -o fs:L:om -l fixed,file-system:,label:,overwrite,mkdir -- "$@"`
+GETOPT=$(getopt -o fs:L:om -l fixed,file-system:,label:,overwrite,mkdir -- "$@")
 eval set -- "$GETOPT"
 while true; do
     case "$1" in
@@ -75,14 +76,15 @@ _check_dir_exist "$(dirname "$1")" $optMkDir
 _check_file_not_exist "$1" $optOverwrite
 vdiskFile=$(realpath "$1")
 
-if [[ "$2" == "" ]]; then
+if [ "$2" = "" ]; then
     _log_error "No size specified."
     exit 1
 fi
 vdiskSize=$2
 
+vdiskFile=$(toWindowsPath "${vdiskFile}")
 diskpartScript=$(cat << _EOF_
-create vdisk file="${vdiskFile//\//\\}" maximum=${vdiskSize} type=${vdiskType}
+create vdisk file="${vdiskFile}" maximum=${vdiskSize} type=${vdiskType}
 attach vdisk
 create partition primary
 format fs=${fileSystem} label="${label}" quick
@@ -93,8 +95,13 @@ _EOF_
 # ------------------
 # Action
 _log_highlight "Creating '${vdiskFile}' ..."
-_log_info "----- Script to be run by diskpart:"
-_log_info "${diskpartScript}"
 
-_log_info "----- Running diskpart ..."
+_log_info "--- Diskpart script: begin"
+_LOG_PREFIX="" _log_info "${diskpartScript}"
+_log_info "--- Diskpart script: end"
+
+_log_info "Running diskpart ..."
+
+# ${_LOG_INFO_FD} is 3 (default), and >&3 is POSIX compliant.
+# shellcheck disable=2039,2086
 echo "${diskpartScript}" | ${_DISKPART} >&${_LOG_INFO_FD}

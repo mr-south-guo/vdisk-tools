@@ -18,10 +18,31 @@ realpath() {
     fi
 }
 
-## @fn: Convert path to Windows style (slash to backslash)
-# Windows's `diskpart` does not support slash in path.
+## @fn toWindowsPath() 
+## @brief Convert path to Windows style (slash to backslash)
+## @param STRING a path string
+## @return STRING with all slashes replaced by backslashes
 toWindowsPath() {
     printf '%s' "$1" | tr "/" "\\"
+}
+
+## @fn str_sub()
+## @brief Returns a substring of a string.
+## @param STRING a string
+## @param OFFSET 0-based offset
+## @param LENGTH length
+## @return the substring of STRING starting at OFFSET of length LENGTH
+str_sub() {
+    awk -v str="$1" -v offset="$2" -v len="$3" 'BEGIN{ string=substr(str, offset+1, len); print string; }'
+}
+
+## @fn str_right()
+## @brief Returns a right-most substring of a string.
+## @param STRING a string
+## @param LENGTH length
+## @return the right-most substring of STRING of length LENGTH
+str_right() {
+    awk -v str="$1" -v len="$2" 'BEGIN{ string=substr(str, length(str)-len+1, len); print string; }'
 }
 
 # Setup Help
